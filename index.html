@@ -359,13 +359,63 @@
     if (monthList.indexOf(thisMonth) === -1) monthList.unshift(thisMonth);
   }
 
+  // Pick up data left behind by the previous version of this app.
+  async function rescueOldData() {
+    var raw;
+    try { raw = (await store.get('acct:cfg:v1')).value; } catch (e) { return false; }
+    var oc;
+    try { oc = JSON.parse(raw); } catch (e) { return false; }
+    if (!oc || !oc.accounts || !oc.accounts.length) return false;
+
+    cfg = {
+      accounts: oc.accounts.map(function (a) {
+        return { id: a.id, name: a.name, locked: !!a.locked, tags: a.tags || [] };
+      }),
+      cats: (oc.cats && oc.cats.length) ? oc.cats : JSON.parse(JSON.stringify(SEED.cats)),
+      lastAcc: oc.lastAcc || oc.accounts[0].id
+    };
+    await saveCfg();
+
+    var opens = {};
+    oc.accounts.forEach(function (a) { opens[a.id] = +a.open || 0; });
+
+    var keys = await store.keys('acct:log:');
+    var months = keys.map(function (k) { return k.slice('acct:log:'.length); })
+                     .filter(function (k) { return /^\d{4}-\d{2}$/.test(k); })
+                     .sort();
+    if (!months.length) months = [thisMonth];
+
+    var carry = opens;
+    for (var i = 0; i < months.length; i++) {
+      var ents = [];
+      try { ents = JSON.parse((await store.get('acct:log:' + months[i])).value) || []; } catch (e) { ents = []; }
+      var rec = { open: carry, entries: ents };
+      await store.set(PRE + 'm:' + months[i], JSON.stringify(rec));
+      var next = {};
+      cfg.accounts.forEach(function (a) { next[a.id] = closing(rec, a.id); });
+      carry = next;
+    }
+    if (months.indexOf(thisMonth) === -1) {
+      await store.set(PRE + 'm:' + thisMonth, JSON.stringify({ open: carry, entries: [] }));
+    }
+    try { await store.set('acct:cfg:v1:migrated', '1'); } catch (e) {}
+    return true;
+  }
+
   async function load() {
+    var haveNew = true;
     try {
       cfg = JSON.parse((await store.get(CFG)).value);
       if (!cfg.accounts || !cfg.accounts.length) throw 0;
-    } catch (e) {
-      cfg = JSON.parse(JSON.stringify(SEED));
-      await saveCfg();
+    } catch (e) { haveNew = false; }
+
+    if (!haveNew) {
+      var rescued = false;
+      try { rescued = await rescueOldData(); } catch (e) { rescued = false; }
+      if (!rescued) {
+        cfg = JSON.parse(JSON.stringify(SEED));
+        await saveCfg();
+      }
     }
 
     month = await readMonth(thisMonth);
