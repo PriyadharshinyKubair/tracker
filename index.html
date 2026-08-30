@@ -1,5 +1,16 @@
-<div id="app"><div class="boot">Opening…</div></div>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#162C29">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Money">
+<meta name="robots" content="noindex, nofollow">
+<title>Money</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23162C29'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' fill='%23E0B25C' font-family='sans-serif'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
 <style>
   :root {
     --ink: #0F1F1D;
@@ -15,19 +26,30 @@
     --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--ink);
+    overscroll-behavior-y: none;
+  }
+  body {
+    min-height: 100dvh;
+    -webkit-text-size-adjust: 100%;
+  }
   #app {
     background: var(--ink);
     color: var(--paper);
     font-family: var(--sans);
     line-height: 1.45;
-    border-radius: 14px;
-    overflow: hidden;
-    max-width: 520px;
+    max-width: 560px;
     margin: 0 auto;
-    padding-bottom: 34px;
+    min-height: 100dvh;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
     -webkit-font-smoothing: antialiased;
   }
+  .top { padding-top: calc(20px + env(safe-area-inset-top)) !important; }
   #app *, #app *::before, #app *::after { box-sizing: border-box; }
+  input, button, select { font-size: 16px; }
+  button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   .boot { padding: 60px 20px; text-align: center; color: var(--muted); font-size: 14px; }
 
   .top { padding: 22px 20px 18px; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -35,6 +57,486 @@
   .bignum {
     margin: 0; font-family: var(--mono); font-size: 40px; font-weight: 600;
     line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--jade);
+  }
+  .bignum.over { color: var(--alert); }
+  .sub { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .sub b { font-family: var(--mono); color: var(--brass); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .accgrid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 15px; }
+  .acccard {
+    flex: 1 1 46%;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 11px;
+  }
+  .acccard.locked { border-style: dashed; opacity: .78; }
+  .acccard em { font-style: normal; display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .acccard strong {
+    font-family: var(--mono); font-size: 15px; font-weight: 600;
+    font-variant-numeric: tabular-nums; display: block;
+  }
+  .acccard strong.neg { color: var(--alert); }
+  .lockmark { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--brass); }
+
+  .setupbar {
+    display: block; width: 100%; margin-top: 13px;
+    background: transparent; border: 1px solid var(--brass); border-radius: 10px;
+    color: var(--brass); font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    padding: 12px; cursor: pointer; min-height: 44px;
+  }
+  .typearea { padding: 15px 20px 14px; border-bottom: 1px solid var(--line); }
+  .modes { display: flex; gap: 6px; margin-bottom: 11px; }
+  .mode {
+    flex: 1; background: transparent; border: 1px solid var(--line); border-radius: 9px;
+    color: var(--muted); font-family: var(--sans); font-size: 13px; padding: 9px; cursor: pointer; min-height: 40px;
+  }
+  .mode.on { background: var(--raised); border-color: var(--brass); color: var(--paper); font-weight: 600; }
+
+  .typebox { display: flex; gap: 9px; }
+  .typebox input {
+    flex: 1; min-width: 0; background: var(--raised); border: 1px solid var(--line);
+    border-radius: 11px; color: var(--paper); font-family: var(--sans); font-size: 17px; padding: 14px 15px;
+  }
+  .typebox input:focus { outline: none; border-color: var(--brass); }
+  .typebox input::placeholder { color: #4E6B67; }
+  .go {
+    background: var(--jade); color: #08201A; border: 0; border-radius: 11px;
+    font-family: var(--sans); font-size: 15px; font-weight: 700; padding: 0 18px; cursor: pointer; min-height: 50px;
+  }
+  .go.credit { background: var(--brass); color: #22160A; }
+  .go:disabled { opacity: .3; cursor: default; }
+
+  .readout { margin-top: 10px; font-size: 12.5px; color: var(--muted); min-height: 18px; }
+  .readout b { font-family: var(--mono); color: var(--paper); font-variant-numeric: tabular-nums; }
+  .readout i { font-style: normal; color: var(--brass); }
+
+  .chiplabel { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--sans); font-size: 12px; color: var(--muted);
+    background: transparent; border: 1px solid var(--line); border-radius: 100px;
+    padding: 7px 12px; cursor: pointer; min-height: 34px;
+  }
+  .chip.on { background: var(--brass); border-color: var(--brass); color: #22160A; font-weight: 600; }
+
+  .sec { padding: 16px 20px 0; }
+  .sechead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .sechead h2 { margin: 0; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .linkbtn { background: none; border: 0; color: var(--brass); font-family: var(--sans); font-size: 12px; cursor: pointer; padding: 4px 0; }
+
+  .row { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .rowmain { flex: 1; min-width: 0; }
+  .rowtop { font-size: 14px; }
+  .rowsub { font-size: 11.5px; color: var(--muted); }
+  .rowamt { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .rowamt.in { color: var(--jade); }
+  .del { background: none; border: 0; color: #4E6B67; font-size: 19px; line-height: 1; cursor: pointer; padding: 6px 0 6px 8px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 4px 0 12px; }
+
+  .catrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 7px 0; font-size: 13px; }
+  .catrow span { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .catrow span b { color: var(--paper); font-weight: 600; }
+  .catrow span.bust b { color: var(--alert); }
+
+  .panel { margin: 14px 20px 0; padding: 15px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .panel h3 { margin: 0 0 11px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .field { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+  .field label { flex: 1; font-size: 13px; }
+  .field input[type="text"] {
+    flex: 1; min-width: 0; background: var(--raised); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--paper); font-family: var(--sans); font-size: 16px; padding: 9px 10px;
+  }
+  .field input[type="tel"] {
+    width: 104px; background: var(--raised); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--paper); font-family: var(--mono); font-size: 16px; text-align: right;
+    font-variant-numeric: tabular-nums; padding: 9px 10px;
+  }
+  .field input:focus { outline: none; border-color: var(--brass); }
+  .lockbtn {
+    background: transparent; border: 1px solid var(--line); border-radius: 8px;
+    color: var(--muted); font-size: 15px; cursor: pointer; padding: 8px 10px; min-width: 40px;
+  }
+  .lockbtn.on { border-color: var(--brass); color: var(--brass); }
+  .divider { height: 1px; background: var(--line); margin: 13px 0; }
+  .ghost {
+    background: transparent; border: 1px solid var(--line); color: var(--paper);
+    border-radius: 8px; font-family: var(--sans); font-size: 13px; padding: 10px 13px;
+    cursor: pointer; min-height: 42px; margin: 4px 4px 0 0;
+  }
+  .ghost.danger { color: var(--alert); }
+  .note { font-size: 11.5px; color: var(--muted); margin: 9px 0 0; line-height: 1.55; }
+
+  .hint { margin: 14px 20px 0; font-size: 12px; color: var(--muted); line-height: 1.65; }
+  .hint code { font-family: var(--mono); color: var(--brass); background: var(--raised); padding: 2px 6px; border-radius: 5px; }
+
+  #app :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { #app * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="boot">Opening…</div></div>
+<script>
+(function () {
+  var store = {
+    get: function (k) {
+      if (window.storage && window.storage.get) return window.storage.get(k);
+      var v = window.localStorage.getItem(k);
+      if (v === null) return Promise.reject(new Error('none'));
+      return Promise.resolve({ key: k, value: v });
+    },
+    set: function (k, v) {
+      if (window.storage && window.storage.set) return window.storage.set(k, v);
+      window.localStorage.setItem(k, v);
+      return Promise.resolve({ key: k, value: v });
+    }
+  };
+
+  var now = new Date();
+  var mKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  var CFG = 'acct:cfg:v1';
+  var LED = 'acct:log:' + mKey;
+
+  var SEED = {
+    accounts: [
+      { id: 'spend', name: 'Spending account', open: 0, locked: false, tags: ['spending', 'spend', 'main', 'gpay', 'upi', 'phonepe'] },
+      { id: 'sal',   name: 'Salary account',   open: 0, locked: false, tags: ['salary', 'sal'] },
+      { id: 'sav',   name: 'Savings account',  open: 0, locked: true,  tags: ['savings', 'saving', 'save', 'sav'] },
+      { id: 'cash',  name: 'Cash',             open: 0, locked: false, tags: ['cash', 'note', 'wallet'] }
+    ],
+    cats: [
+      { id: 'home',  name: 'Home & groceries', limit: 6000, words: ['rent', 'bill', 'current', 'eb', 'gas', 'cylinder', 'grocery', 'groceries', 'provision', 'milk', 'vegetable', 'veg', 'market', 'maid', 'water'] },
+      { id: 'care',  name: 'Personal care',    limit: 3800, words: ['soap', 'shampoo', 'salon', 'haircut', 'barber', 'cream', 'medicine', 'medical', 'tablet', 'doctor', 'clothes', 'dress', 'shirt', 'care'] },
+      { id: 'fuel',  name: 'Travel',           limit: 2300, words: ['petrol', 'fuel', 'bunk', 'diesel', 'bus', 'auto', 'train', 'metro', 'cab', 'ola', 'uber', 'rapido', 'travel', 'ticket'] },
+      { id: 'out',   name: 'Eating out',       limit: 2000, words: ['tea', 'coffee', 'snack', 'hotel', 'restaurant', 'swiggy', 'zomato', 'movie', 'outing', 'icecream', 'juice', 'biryani', 'party', 'friends', 'amazon', 'flipkart', 'shopping'] },
+      { id: 'lunch', name: 'Lunch',            limit: 1000, words: ['lunch', 'mess', 'tiffin', 'food', 'meal', 'canteen', 'breakfast', 'dinner'] },
+      { id: 'phone', name: 'Phone & subs',     limit: 800,  words: ['recharge', 'mobile', 'phone', 'data', 'wifi', 'internet', 'jio', 'airtel', 'netflix', 'spotify', 'hotstar', 'prime'] },
+      { id: 'other', name: 'Other',            limit: 0,    words: ['other', 'misc', 'emi', 'loan', 'gift', 'transfer'] }
+    ],
+    lastAcc: 'spend'
+  };
+
+  var cfg = null, log = [], mode = 'out';
+  var accPick = null, catPick = null, showSet = false;
+  var app = document.getElementById('app');
+
+  function money(n) {
+    var neg = n < 0, s = Math.round(Math.abs(n)).toString();
+    var t = s.slice(-3), r = s.slice(0, -3);
+    if (r) t = r.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + t;
+    return (neg ? '-\u20B9' : '\u20B9') + t;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function daysLeft() {
+    return Math.max(1, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - new Date().getDate() + 1);
+  }
+  function accById(id) { return cfg.accounts.filter(function (a) { return a.id === id; })[0]; }
+  function catById(id) { return cfg.cats.filter(function (c) { return c.id === id; })[0]; }
+
+  function balance(accId) {
+    var a = accById(accId);
+    if (!a) return 0;
+    return log.reduce(function (t, e) {
+      return e.accId === accId ? t + (e.dir === 'in' ? e.amt : -e.amt) : t;
+    }, +a.open || 0);
+  }
+  function spentIn(catId) {
+    return log.reduce(function (t, e) {
+      return (e.dir === 'out' && e.catId === catId) ? t + e.amt : t;
+    }, 0);
+  }
+
+  function parse(text) {
+    var clean = text.replace(/,/g, '');
+    var m = clean.match(/\d+(\.\d+)?/);
+    if (!m) return null;
+    var amt = parseFloat(m[0]);
+    if (!amt || amt <= 0) return null;
+    var rest = clean.replace(m[0], ' ').replace(/^\s*\+\s*/, ' ').replace(/\s+/g, ' ').trim();
+    var low = ' ' + rest.toLowerCase() + ' ';
+
+    var accHit = null, usedWord = null;
+    for (var i = 0; i < cfg.accounts.length && !accHit; i++) {
+      var a = cfg.accounts[i];
+      for (var j = 0; j < a.tags.length; j++) {
+        if (low.indexOf(' ' + a.tags[j]) > -1) { accHit = a.id; usedWord = a.tags[j]; break; }
+      }
+    }
+    var catHit = null;
+    for (var k = 0; k < cfg.cats.length && !catHit; k++) {
+      var c = cfg.cats[k];
+      for (var n = 0; n < c.words.length; n++) {
+        if (low.indexOf(' ' + c.words[n]) > -1) { catHit = c.id; break; }
+      }
+    }
+    var note = rest;
+    if (usedWord) {
+      note = rest.replace(new RegExp('\\b' + usedWord + '\\w*', 'i'), '').replace(/\s+/g, ' ').trim();
+    }
+    return { amt: amt, note: note, accId: accHit, catId: catHit };
+  }
+
+  async function load() {
+    try {
+      var c = await store.get(CFG);
+      cfg = JSON.parse(c.value);
+      if (!cfg.accounts || !cfg.accounts.length) throw 0;
+    } catch (e) {
+      cfg = JSON.parse(JSON.stringify(SEED));
+      try { await store.set(CFG, JSON.stringify(cfg)); } catch (e2) {}
+    }
+    try { log = JSON.parse((await store.get(LED)).value) || []; } catch (e) { log = []; }
+    accPick = cfg.lastAcc || cfg.accounts[0].id;
+    var untouched = !log.length && cfg.accounts.every(function (a) { return !(+a.open); });
+    if (untouched) showSet = true;
+    render();
+  }
+  async function saveCfg() { try { await store.set(CFG, JSON.stringify(cfg)); } catch (e) {} }
+  async function saveLog() { try { await store.set(LED, JSON.stringify(log)); } catch (e) {} }
+
+  function render(keepText) {
+    var free = 0, total = 0;
+    cfg.accounts.forEach(function (a) {
+      var b = balance(a.id);
+      total += b;
+      if (!a.locked) free += b;
+    });
+    var dl = daysLeft();
+
+    var h = '';
+    h += '<div class="top">';
+    h += '<p class="eyebrow">Left to spend</p>';
+    h += '<p class="bignum' + (free < 0 ? ' over' : '') + '">' + money(free) + '</p>';
+    h += '<p class="sub"><b>' + money(free / dl) + ' a day</b> for ' + dl + ' more day' + (dl === 1 ? '' : 's') +
+         ' \u00b7 ' + money(total) + ' across all accounts</p>';
+    h += '<div class="accgrid">';
+    cfg.accounts.forEach(function (a) {
+      var b = balance(a.id);
+      h += '<div class="acccard' + (a.locked ? ' locked' : '') + '">';
+      h += '<em>' + esc(a.name) + (a.locked ? ' <span class="lockmark">locked</span>' : '') + '</em>';
+      h += '<strong' + (b < 0 ? ' class="neg"' : '') + '>' + money(b) + '</strong></div>';
+    });
+    h += '</div>';
+    h += '<button class="setupbar" id="toggle">' + (showSet ? 'Hide balances & limits' : 'Enter balances & limits') + '</button>';
+    h += '</div>';
+
+    h += '<div class="typearea">';
+    h += '<div class="modes">';
+    h += '<button class="mode' + (mode === 'out' ? ' on' : '') + '" data-mode="out">Money out</button>';
+    h += '<button class="mode' + (mode === 'in' ? ' on' : '') + '" data-mode="in">Money in</button>';
+    h += '</div>';
+    h += '<div class="typebox"><input id="line" type="text" autocomplete="off" enterkeyhint="done" placeholder="' +
+         (mode === 'out' ? '250 lunch gpay' : '25000 salary') + '">';
+    h += '<button class="go' + (mode === 'in' ? ' credit' : '') + '" id="go" disabled>' + (mode === 'in' ? 'Add' : 'Spend') + '</button></div>';
+    h += '<div class="readout" id="readout">Type an amount and a word.</div>';
+
+    h += '<p class="chiplabel">Account</p><div class="chips">';
+    cfg.accounts.forEach(function (a) {
+      h += '<button class="chip" data-acc="' + a.id + '">' + esc(a.name) + '</button>';
+    });
+    h += '</div>';
+
+    if (mode === 'out') {
+      h += '<p class="chiplabel">Category</p><div class="chips">';
+      cfg.cats.forEach(function (c) {
+        h += '<button class="chip" data-cat="' + c.id + '">' + esc(c.name) + '</button>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+
+    if (showSet) {
+      h += '<div class="panel"><h3>Opening balance in each account</h3>';
+      cfg.accounts.forEach(function (a) {
+        h += '<div class="field"><input type="text" data-aname="' + a.id + '" value="' + esc(a.name) + '">';
+        h += '<input type="tel" inputmode="numeric" data-aopen="' + a.id + '" value="' + (+a.open || 0) + '">';
+        h += '<button class="lockbtn' + (a.locked ? ' on' : '') + '" data-alock="' + a.id + '" title="Lock from spending">' +
+             (a.locked ? '\u25CF' : '\u25CB') + '</button></div>';
+      });
+      h += '<p class="note">A locked account still shows its balance but is left out of &ldquo;left to spend&rdquo;. Lock your savings.</p>';
+      h += '<div class="divider"><\/div><h3>Category limits</h3>';
+      cfg.cats.forEach(function (c) {
+        h += '<div class="field"><label>' + esc(c.name) + '</label>';
+        h += '<input type="tel" inputmode="numeric" data-lim="' + c.id + '" value="' + (+c.limit || 0) + '"></div>';
+      });
+      h += '<div class="divider"></div>';
+      h += '<button class="ghost" id="newmonth">Start a new month</button>';
+      h += '<button class="ghost danger" id="wipe">Clear entries</button>';
+      h += '<p class="note">Starting a new month carries each balance forward as the new opening figure and clears the entry list.</p>';
+      h += '</div>';
+    }
+
+    h += '<div class="sec"><div class="sechead"><h2>Budget</h2></div>';
+    cfg.cats.forEach(function (c) {
+      if (!c.limit && !spentIn(c.id)) return;
+      var s = spentIn(c.id), bust = c.limit > 0 && s > c.limit;
+      h += '<div class="catrow"><em style="font-style:normal">' + esc(c.name) + '</em>';
+      h += '<span' + (bust ? ' class="bust"' : '') + '><b>' + money(s) + '</b>' + (c.limit ? ' / ' + money(c.limit) : '') + '</span></div>';
+    });
+    h += '</div>';
+
+    h += '<div class="sec"><div class="sechead"><h2>' + log.length + ' entr' + (log.length === 1 ? 'y' : 'ies') + '</h2></div>';
+    if (!log.length) {
+      h += '<p class="empty">Put your opening balances in first \u2014 tap Set up. Then log as you go.</p>';
+    } else {
+      log.slice().sort(function (a, b) { return b.ts - a.ts; }).forEach(function (e) {
+        var a = accById(e.accId), c = catById(e.catId), d = new Date(e.ts);
+        var label = e.note || (e.dir === 'in' ? 'Money in' : (c ? c.name : 'Spend'));
+        h += '<div class="row"><div class="rowmain">';
+        h += '<div class="rowtop">' + esc(label) + '</div>';
+        h += '<div class="rowsub">' + esc(a ? a.name : '?') + (e.dir === 'out' && c ? ' \u00b7 ' + esc(c.name) : '') +
+             ' \u00b7 ' + d.getDate() + ' ' + d.toLocaleString('en-IN', { month: 'short' }) + '</div>';
+        h += '</div><div class="rowamt' + (e.dir === 'in' ? ' in' : '') + '">' +
+             (e.dir === 'in' ? '+' : '\u2212') + money(e.amt).replace('\u20B9', '\u20B9') + '</div>';
+        h += '<button class="del" data-del="' + e.id + '" aria-label="Delete">\u00d7</button></div>';
+      });
+    }
+    h += '</div>';
+
+    h += '<p class="hint">Name the account in the line and it picks it up: <code>250 lunch gpay</code>, ' +
+         '<code>1200 petrol cash</code>, <code>3000 rent salary</code>. Switch to Money in for a credit: ' +
+         '<code>25000 salary</code>. Tap a chip to correct anything.</p>';
+
+    app.innerHTML = h;
+    wire(keepText);
+  }
+
+  function wire(keepText) {
+    var line = document.getElementById('line');
+    var go = document.getElementById('go');
+    var readout = document.getElementById('readout');
+    if (keepText) line.value = keepText;
+
+    function current() {
+      var p = parse(line.value);
+      if (!p) return null;
+      p.accId = accPick || p.accId || cfg.lastAcc;
+      if (mode === 'out') p.catId = catPick || p.catId;
+      else p.catId = null;
+      return p;
+    }
+
+    function refresh() {
+      var p = parse(line.value);
+      var accs = document.querySelectorAll('[data-acc]');
+      var cats = document.querySelectorAll('[data-cat]');
+      if (!p) {
+        readout.textContent = 'Type an amount and a word.';
+        go.disabled = true;
+      } else {
+        var accId = accPick || p.accId || cfg.lastAcc;
+        var catId = mode === 'out' ? (catPick || p.catId) : null;
+        var a = accById(accId), c = catId ? catById(catId) : null;
+        var txt = '<b>' + money(p.amt) + '</b> \u00b7 ' + (mode === 'in' ? 'into ' : 'from ') +
+                  '<i>' + esc(a ? a.name : 'pick an account') + '</i>';
+        if (mode === 'out') txt += ' \u00b7 ' + (c ? esc(c.name) : 'pick a category');
+        readout.innerHTML = txt;
+        go.disabled = !a || (mode === 'out' && !c);
+        Array.prototype.forEach.call(accs, function (b) {
+          b.classList.toggle('on', b.getAttribute('data-acc') === accId);
+        });
+        Array.prototype.forEach.call(cats, function (b) {
+          b.classList.toggle('on', b.getAttribute('data-cat') === catId);
+        });
+        return;
+      }
+      Array.prototype.forEach.call(accs, function (b) { b.classList.remove('on'); });
+      Array.prototype.forEach.call(cats, function (b) { b.classList.remove('on'); });
+    }
+
+    function submit() {
+      var p = current();
+      if (!p || !p.accId) return;
+      if (mode === 'out' && !p.catId) return;
+      log.push({
+        id: 'e' + Date.now() + Math.random().toString(36).slice(2, 5),
+        dir: mode, accId: p.accId, catId: p.catId, amt: p.amt, note: p.note, ts: Date.now()
+      });
+      cfg.lastAcc = p.accId;
+      accPick = null; catPick = null;
+      saveLog(); saveCfg();
+      render();
+      var l = document.getElementById('line');
+      if (l) l.focus();
+    }
+
+    line.addEventListener('input', function () { accPick = null; catPick = null; refresh(); });
+    line.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit(); });
+    go.addEventListener('click', submit);
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+      b.addEventListener('click', function () {
+        mode = b.getAttribute('data-mode');
+        accPick = null; catPick = null;
+        render();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-acc]'), function (b) {
+      b.addEventListener('click', function () { accPick = b.getAttribute('data-acc'); refresh(); line.focus(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cat]'), function (b) {
+      b.addEventListener('click', function () { catPick = b.getAttribute('data-cat'); refresh(); line.focus(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-del');
+        log = log.filter(function (e) { return e.id !== id; });
+        saveLog(); render();
+      });
+    });
+
+    document.getElementById('toggle').addEventListener('click', function () {
+      showSet = !showSet;
+      render(line.value);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-aname]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var a = accById(inp.getAttribute('data-aname'));
+        if (a) { a.name = inp.value.trim() || a.name; saveCfg(); render(); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-aopen]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var a = accById(inp.getAttribute('data-aopen'));
+        if (a) { a.open = parseFloat(inp.value) || 0; saveCfg(); render(); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-alock]'), function (b) {
+      b.addEventListener('click', function () {
+        var a = accById(b.getAttribute('data-alock'));
+        if (a) { a.locked = !a.locked; saveCfg(); render(); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-lim]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var c = catById(inp.getAttribute('data-lim'));
+        if (c) { c.limit = parseFloat(inp.value) || 0; saveCfg(); render(); }
+      });
+    });
+
+    var nm = document.getElementById('newmonth');
+    if (nm) nm.addEventListener('click', function () {
+      cfg.accounts.forEach(function (a) { a.open = balance(a.id); });
+      log = [];
+      saveCfg(); saveLog(); render();
+    });
+    var wipe = document.getElementById('wipe');
+    if (wipe) wipe.addEventListener('click', function () { log = []; saveLog(); render(); });
+
+    refresh();
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>    line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--jade);
   }
   .bignum.over { color: var(--alert); }
   .sub { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
