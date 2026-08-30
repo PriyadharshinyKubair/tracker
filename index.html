@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E6EEF7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Money">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Money</title>
+<style>
+  :root {
+    --ink: #F8FAFC;
+    --surface: #E6EEF7;
+    --raised: #FFFFFF;
+    --line: #D5E0EC;
+    --paper: #12233A;
+    --muted: #64778E;
+    --accent: #1B5FA8;
+    --deep: #0E4C86;
+    --good: #157F5A;
+    --alert: #C0392B;
+    --mono: ui-monospace, "SF Mono", "Menlo", "Roboto Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  html, body { margin: 0; padding: 0; background: var(--ink); overscroll-behavior-y: none; }
+  body { min-height: 100dvh; -webkit-text-size-adjust: 100%; }
+  #app {
+    background: var(--ink); color: var(--paper); font-family: var(--sans);
+    line-height: 1.45; max-width: 560px; margin: 0 auto; min-height: 100dvh;
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing: antialiased;
+  }
+  #app *, #app *::before, #app *::after { box-sizing: border-box; }
+  input, button, select { font-size: 16px; font-family: inherit; }
+  button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .boot { padding: 70px 20px; text-align: center; color: var(--muted); font-size: 14px; }
+
+  .panel textarea {
+    width: 100%; min-height: 110px; background: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--paper); font-family: var(--mono); font-size: 12px;
+    padding: 10px; margin-bottom: 8px; resize: vertical;
+  }
+  .panel textarea:focus { outline: none; border-color: var(--accent); }
+  .tabs {
+    display: flex; gap: 0; background: var(--surface);
+    padding: 0 16px;
+  }
+  .tab {
+    flex: 1; background: transparent; border: 0; border-bottom: 2px solid transparent;
+    color: var(--muted); font-size: 14px; padding: 12px 0 10px; cursor: pointer;
+  }
+  .tab.on { color: var(--deep); font-weight: 700; border-bottom-color: var(--accent); }
+
+  .top { padding: 18px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .eyebrow { margin: 0 0 5px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .bignum {
+    margin: 0; font-family: var(--mono); font-size: 38px; font-weight: 700;
+    line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--deep);
+  }
+  .bignum.over { color: var(--alert); }
+  .sub { margin: 9px 0 0; font-size: 12.5px; color: var(--muted); }
+  .sub b { font-family: var(--mono); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .accgrid { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .acccard {
+    flex: 1 1 46%; background: var(--raised); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 11px; box-shadow: 0 1px 2px rgba(18,35,58,.05);
+  }
+  .acccard.locked { border-style: dashed; }
+  .acccard em { font-style: normal; display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .acccard strong { font-family: var(--mono); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; display: block; }
+  .acccard strong.neg { color: var(--alert); }
+  .lockmark { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+
+  .setupbar {
+    display: block; width: 100%; margin-top: 12px; background: var(--raised);
+    border: 1px solid var(--accent); border-radius: 10px; color: var(--accent);
+    font-size: 13.5px; font-weight: 600; padding: 12px; cursor: pointer; min-height: 44px;
+  }
+
+  .typearea { padding: 15px 20px 14px; border-bottom: 1px solid var(--line); }
+  .modes { display: flex; gap: 6px; margin-bottom: 11px; }
+  .mode {
+    padding-left: 4px; padding-right: 4px;
+    flex: 1; background: var(--raised); border: 1px solid var(--line); border-radius: 9px;
+    color: var(--muted); font-size: 13px; padding: 9px; cursor: pointer; min-height: 42px;
+  }
+  .mode.on { border-color: var(--accent); color: var(--deep); font-weight: 700; }
+
+  .typebox { display: flex; gap: 9px; }
+  .typebox input {
+    flex: 1; min-width: 0; background: var(--raised); border: 1px solid var(--line);
+    border-radius: 11px; color: var(--paper); font-size: 17px; padding: 14px 15px;
+    box-shadow: inset 0 1px 2px rgba(18,35,58,.04);
+  }
+  .typebox input:focus { outline: none; border-color: var(--accent); }
+  .typebox input::placeholder { color: #9AAABC; }
+  .go {
+    background: var(--accent); color: #fff; border: 0; border-radius: 11px;
+    font-size: 15px; font-weight: 700; padding: 0 18px; cursor: pointer; min-height: 50px;
+  }
+  .go.credit { background: var(--good); }
+  .go.shift { background: var(--deep); }
+  .rowamt.move { color: var(--muted); }
+  .go:disabled { opacity: .35; cursor: default; }
+
+  .readout { margin-top: 10px; font-size: 12.5px; color: var(--muted); min-height: 18px; }
+  .readout b { font-family: var(--mono); color: var(--paper); font-variant-numeric: tabular-nums; }
+  .readout i { font-style: normal; color: var(--accent); font-weight: 600; }
+
+  .chiplabel { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); margin: 12px 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px; color: var(--muted); background: var(--raised);
+    border: 1px solid var(--line); border-radius: 100px; padding: 7px 12px; cursor: pointer; min-height: 34px;
+  }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .chip .rem { font-family: var(--mono); font-size: 11px; font-weight: 600; opacity: .6; font-variant-numeric: tabular-nums; }
+  .chip .rem.neg { color: var(--alert); opacity: 1; }
+  .chip.on .rem { opacity: .9; color: #fff; }
+  .chip.on .rem.neg { color: #FFD6CE; }
+  .chip b.rem { font-family: var(--mono); font-size: 10.5px; font-weight: 700; margin-left: 5px; opacity: .75; }
+  .chip b.rem.neg { color: var(--alert); opacity: 1; }
+  .chip.on b.rem { opacity: .95; }
+  .chip.on b.rem.neg { color: #FFD9D2; }
+  .inuse { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); min-width: 42px; text-align: center; }
+
+  .sec { padding: 16px 20px 0; }
+  .sechead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .sechead h2 { margin: 0; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+  .row { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .rowmain { flex: 1; min-width: 0; }
+  .rowtop { font-size: 14px; }
+  .rowsub { font-size: 11.5px; color: var(--muted); }
+  .rowamt { font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .rowamt.in { color: var(--good); }
+  .del { background: none; border: 0; color: #9AAABC; font-size: 19px; line-height: 1; cursor: pointer; padding: 6px 0 6px 8px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 4px 0 12px; }
+
+  .bar { height: 7px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 5px; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .bar i.bust { background: var(--alert); }
+  .catblock { margin-bottom: 13px; }
+  .catline { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13.5px; }
+  .catline span { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+  .catline span b { color: var(--paper); font-weight: 700; }
+  .catline span.bust b { color: var(--alert); }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 7px; }
+  .stat {
+    flex: 1 1 46%; background: var(--raised); border: 1px solid var(--line);
+    border-radius: 10px; padding: 11px 12px;
+  }
+  .stat em { font-style: normal; display: block; font-size: 10.5px; color: var(--muted); margin-bottom: 4px; }
+  .stat strong { font-family: var(--mono); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; display: block; }
+  .stat strong.in { color: var(--good); }
+  .stat strong.out { color: var(--alert); }
+
+  .months { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+
+  .panel { margin: 14px 20px 0; padding: 15px; background: var(--raised); border: 1px solid var(--line); border-radius: 12px; }
+  .panel h3 { margin: 0 0 11px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .field { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+  .field label { flex: 1; font-size: 13px; }
+  .field input[type="text"] {
+    flex: 1; min-width: 0; background: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; color: var(--paper); font-size: 16px; padding: 9px 10px;
+  }
+  .field input[type="tel"] {
+    width: 106px; background: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--paper); font-family: var(--mono); font-size: 16px; text-align: right;
+    font-variant-numeric: tabular-nums; padding: 9px 10px;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .lockbtn {
+    background: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+    color: var(--muted); font-size: 15px; cursor: pointer; padding: 8px 10px; min-width: 42px;
+  }
+  .lockbtn.on { border-color: var(--accent); color: var(--accent); }
+  .divider { height: 1px; background: var(--line); margin: 13px 0; }
+  .ghost {
+    background: var(--ink); border: 1px solid var(--line); color: var(--paper);
+    border-radius: 8px; font-size: 13px; padding: 10px 13px; cursor: pointer;
+    min-height: 42px; margin: 4px 4px 0 0;
+  }
+  .ghost.danger { color: var(--alert); }
+  .note { font-size: 11.5px; color: var(--muted); margin: 9px 0 0; line-height: 1.55; }
+
+  .hint { margin: 16px 20px 0; font-size: 12px; color: var(--muted); line-height: 1.65; }
+  .hint code { font-family: var(--mono); color: var(--deep); background: var(--surface); padding: 2px 6px; border-radius: 5px; }
+
+  #app :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { #app * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="boot">Opening…</div></div>
+
+<script>
+(function () {
+  var PRE = 'mv1:';
+  var CFG = PRE + 'cfg';
+  var mk = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+  var thisMonth = mk(new Date());
+
+  // Everything stays on this device, in this browser. Nothing is sent anywhere.
+  var mem = {};
+  var hasLS = (function () {
+    try {
+      window.localStorage.setItem('__t', '1');
+      window.localStorage.removeItem('__t');
+      return true;
+    } catch (e) { return false; }
+  })();
+
+  var store = {
+    get: function (k) {
+      var v = hasLS ? window.localStorage.getItem(k) : (k in mem ? mem[k] : null);
+      if (v === null || v === undefined) return Promise.reject(new Error('none'));
+      return Promise.resolve({ key: k, value: v });
+    },
+    set: function (k, v) {
+      if (hasLS) window.localStorage.setItem(k, v); else mem[k] = v;
+      return Promise.resolve({ key: k, value: v });
+    },
+    keys: function (prefix) {
+      var out = [];
+      if (hasLS) {
+        for (var i = 0; i < window.localStorage.length; i++) {
+          var k = window.localStorage.key(i);
+          if (k && k.indexOf(prefix) === 0) out.push(k);
+        }
+      } else {
+        Object.keys(mem).forEach(function (k) { if (k.indexOf(prefix) === 0) out.push(k); });
+      }
+      return Promise.resolve(out);
+    }
+  };
+
+  var SEED = {
+    accounts: [
+      { id: 'spend', name: 'Spending account', locked: false, tags: ['spending', 'spend', 'main', 'gpay', 'upi', 'phonepe'] },
+      { id: 'sal',   name: 'Salary account',   locked: false, tags: ['salary', 'sal'] },
+      { id: 'sav',   name: 'Savings account',  locked: true,  tags: ['savings', 'saving', 'save', 'sav'] },
+      { id: 'cash',  name: 'Cash',             locked: false, tags: ['cash', 'wallet', 'note'] }
+    ],
+    cats: [
+      { id: 'home',  name: 'Home & groceries', limit: 6000, words: ['rent','bill','current','eb','gas','cylinder','grocery','groceries','provision','milk','vegetable','veg','market','maid','water'] },
+      { id: 'care',  name: 'Personal care',    limit: 3800, words: ['soap','shampoo','salon','haircut','barber','cream','medicine','medical','tablet','doctor','clothes','dress','shirt','care'] },
+      { id: 'fuel',  name: 'Travel',           limit: 2300, words: ['petrol','fuel','bunk','diesel','bus','auto','train','metro','cab','ola','uber','rapido','travel','ticket'] },
+      { id: 'out',   name: 'Eating out',       limit: 2000, words: ['tea','coffee','snack','hotel','restaurant','swiggy','zomato','movie','outing','icecream','juice','biryani','party','friends','amazon','flipkart','shopping'] },
+      { id: 'lunch', name: 'Lunch',            limit: 1000, words: ['lunch','mess','tiffin','food','meal','canteen','breakfast','dinner'] },
+      { id: 'phone', name: 'Phone & subs',     limit: 800,  words: ['recharge','mobile','phone','data','wifi','internet','jio','airtel','netflix','spotify','hotstar','prime'] },
+      { id: 'other', name: 'Other',            limit: 0,    words: ['other','misc','emi','loan','gift','transfer'] }
+    ],
+    lastAcc: 'spend'
+  };
+
+  var cfg = null;
+  var month = null;          // { open: {accId:n}, entries: [] } for thisMonth
+  var view = 'log';
+  var mode = 'out';
+  var accPick = null, acc2Pick = null, catPick = null, showSet = false;
+  var monthList = [], dashKey = thisMonth, dashData = null;
+  var app = document.getElementById('app');
+
+  function money(n) {
+    var neg = n < 0, s = Math.round(Math.abs(n)).toString();
+    var t = s.slice(-3), r = s.slice(0, -3);
+    if (r) t = r.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + t;
+    return (neg ? '-\u20B9' : '\u20B9') + t;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function label(key) {
+    var p = key.split('-');
+    return new Date(+p[0], +p[1] - 1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+  }
+  function shortLabel(key) {
+    var p = key.split('-');
+    return new Date(+p[0], +p[1] - 1, 1).toLocaleString('en-IN', { month: 'short' });
+  }
+  function daysLeft() {
+    var d = new Date();
+    return Math.max(1, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate() + 1);
+  }
+  function daysElapsed(key) {
+    if (key !== thisMonth) {
+      var p = key.split('-');
+      return new Date(+p[0], +p[1], 0).getDate();
+    }
+    return new Date().getDate();
+  }
+  function accById(id) { return cfg.accounts.filter(function (a) { return a.id === id; })[0]; }
+  function catById(id) { return cfg.cats.filter(function (c) { return c.id === id; })[0]; }
+
+  function closing(rec, accId) {
+    return (rec.entries || []).reduce(function (t, e) {
+      if (e.dir === 'move') {
+        if (e.accId === accId) return t - e.amt;
+        if (e.toId === accId) return t + e.amt;
+        return t;
+      }
+      if (e.accId !== accId) return t;
+      return t + (e.dir === 'in' ? e.amt : -e.amt);
+    }, (rec.open && +rec.open[accId]) || 0);
+  }
+  function balance(accId) { return closing(month, accId); }
+  function spentIn(rec, catId) {
+    return (rec.entries || []).reduce(function (t, e) {
+      return (e.dir === 'out' && e.catId === catId) ? t + e.amt : t;
+    }, 0);
+  }
+
+  function parse(text) {
+    var clean = text.replace(/,/g, '');
+    var m = clean.match(/\d+(\.\d+)?/);
+    if (!m) return null;
+    var amt = parseFloat(m[0]);
+    if (!amt || amt <= 0) return null;
+    var rest = clean.replace(m[0], ' ').replace(/^\s*\+\s*/, ' ').replace(/\s+/g, ' ').trim();
+    var low = ' ' + rest.toLowerCase() + ' ';
+    var found = [];
+    cfg.accounts.forEach(function (a) {
+      var at = -1, w = null;
+      a.tags.forEach(function (tag) {
+        var idx = low.indexOf(' ' + tag);
+        if (idx > -1 && (at === -1 || idx < at)) { at = idx; w = tag; }
+      });
+      if (at > -1) found.push({ id: a.id, at: at, word: w });
+    });
+    found.sort(function (x, y) { return x.at - y.at; });
+    var accHit = found.length ? found[0].id : null;
+    var accHit2 = found.length > 1 ? found[1].id : null;
+    var catHit = null;
+    for (var k = 0; k < cfg.cats.length && !catHit; k++) {
+      var c = cfg.cats[k];
+      for (var n = 0; n < c.words.length; n++) {
+        if (low.indexOf(' ' + c.words[n]) > -1) { catHit = c.id; break; }
+      }
+    }
+    var note = rest;
+    found.forEach(function (f) {
+      note = note.replace(new RegExp('\\b' + f.word + '\\w*', 'i'), '');
+    });
+    note = note.replace(/\s+/g, ' ').trim();
+    return { amt: amt, note: note, accId: accHit, toId: accHit2, catId: catHit };
+  }
+
+  async function readMonth(key) {
+    try { return JSON.parse((await store.get(PRE + 'm:' + key)).value); }
+    catch (e) { return null; }
+  }
+  async function saveMonth() { try { await store.set(PRE + 'm:' + thisMonth, JSON.stringify(month)); } catch (e) {} }
+  async function saveCfg() { try { await store.set(CFG, JSON.stringify(cfg)); } catch (e) {} }
+
+  async function refreshMonthList() {
+    var keys = await store.keys(PRE + 'm:');
+    monthList = keys.map(function (k) { return k.slice((PRE + 'm:').length); })
+                    .filter(function (k) { return /^\d{4}-\d{2}$/.test(k); })
+                    .sort().reverse();
+    if (monthList.indexOf(thisMonth) === -1) monthList.unshift(thisMonth);
+  }
+
+  // Pick up data left behind by the previous version of this app.
+  async function rescueOldData() {
+    var raw;
+    try { raw = (await store.get('acct:cfg:v1')).value; } catch (e) { return false; }
+    var oc;
+    try { oc = JSON.parse(raw); } catch (e) { return false; }
+    if (!oc || !oc.accounts || !oc.accounts.length) return false;
+
+    cfg = {
+      accounts: oc.accounts.map(function (a) {
+        return { id: a.id, name: a.name, locked: !!a.locked, tags: a.tags || [] };
+      }),
+      cats: (oc.cats && oc.cats.length) ? oc.cats : JSON.parse(JSON.stringify(SEED.cats)),
+      lastAcc: oc.lastAcc || oc.accounts[0].id
+    };
+    await saveCfg();
+
+    var opens = {};
+    oc.accounts.forEach(function (a) { opens[a.id] = +a.open || 0; });
+
+    var keys = await store.keys('acct:log:');
+    var months = keys.map(function (k) { return k.slice('acct:log:'.length); })
+                     .filter(function (k) { return /^\d{4}-\d{2}$/.test(k); })
+                     .sort();
+    if (!months.length) months = [thisMonth];
+
+    var carry = opens;
+    for (var i = 0; i < months.length; i++) {
+      var ents = [];
+      try { ents = JSON.parse((await store.get('acct:log:' + months[i])).value) || []; } catch (e) { ents = []; }
+      var rec = { open: carry, entries: ents };
+      await store.set(PRE + 'm:' + months[i], JSON.stringify(rec));
+      var next = {};
+      cfg.accounts.forEach(function (a) { next[a.id] = closing(rec, a.id); });
+      carry = next;
+    }
+    if (months.indexOf(thisMonth) === -1) {
+      await store.set(PRE + 'm:' + thisMonth, JSON.stringify({ open: carry, entries: [] }));
+    }
+    try { await store.set('acct:cfg:v1:migrated', '1'); } catch (e) {}
+    return true;
+  }
+
+  // Never let the app come up with no accounts or no categories.
+  function repairCfg() {
+    var fixed = false;
+    if (!cfg || typeof cfg !== 'object') { cfg = JSON.parse(JSON.stringify(SEED)); fixed = true; }
+    if (!Array.isArray(cfg.accounts) || !cfg.accounts.length) {
+      cfg.accounts = JSON.parse(JSON.stringify(SEED.accounts)); fixed = true;
+    }
+    if (!Array.isArray(cfg.cats) || !cfg.cats.length) {
+      cfg.cats = JSON.parse(JSON.stringify(SEED.cats)); fixed = true;
+    }
+    cfg.accounts.forEach(function (a) {
+      if (!Array.isArray(a.tags) || !a.tags.length) {
+        var seed = SEED.accounts.filter(function (x) { return x.id === a.id; })[0];
+        a.tags = seed ? seed.tags.slice() : [String(a.name || a.id).toLowerCase().split(' ')[0]];
+        fixed = true;
+      }
+      if (!a.name) { a.name = a.id; fixed = true; }
+    });
+    cfg.cats.forEach(function (c) {
+      if (!Array.isArray(c.words) || !c.words.length) {
+        var seed = SEED.cats.filter(function (x) { return x.id === c.id; })[0];
+        c.words = seed ? seed.words.slice() : [String(c.name || c.id).toLowerCase().split(' ')[0]];
+        fixed = true;
+      }
+      if (!c.name) { c.name = c.id; fixed = true; }
+      if (typeof c.limit !== 'number') { c.limit = 0; fixed = true; }
+    });
+    if (!cfg.lastAcc || !cfg.accounts.some(function (a) { return a.id === cfg.lastAcc; })) {
+      cfg.lastAcc = cfg.accounts[0].id; fixed = true;
+    }
+    if (fixed) saveCfg();
+  }
+
+  async function load() {
+    var haveNew = true;
+    try {
+      cfg = JSON.parse((await store.get(CFG)).value);
+      if (!cfg.accounts || !cfg.accounts.length) throw 0;
+    } catch (e) { haveNew = false; }
+
+    if (!haveNew) {
+      var rescued = false;
+      try { rescued = await rescueOldData(); } catch (e) { rescued = false; }
+      if (!rescued) {
+        cfg = JSON.parse(JSON.stringify(SEED));
+        await saveCfg();
+      }
+    }
+
+    repairCfg();
+
+    month = await readMonth(thisMonth);
+    if (!month) {
+      // carry closing balances forward from the most recent earlier month
+      await refreshMonthList();
+      var prior = monthList.filter(function (k) { return k < thisMonth; }).sort().reverse()[0];
+      var open = {};
+      if (prior) {
+        var prev = await readMonth(prior);
+        if (prev) cfg.accounts.forEach(function (a) { open[a.id] = closing(prev, a.id); });
+      }
+      month = { open: open, entries: [] };
+      await saveMonth();
+    }
+
+    await refreshMonthList();
+    dashKey = thisMonth;
+    dashData = month;
+
+    var untouched = !month.entries.length &&
+      cfg.accounts.every(function (a) { return !(+((month.open || {})[a.id])); });
+    if (untouched) showSet = true;
+    render();
+  }
+
+  // -------------------------------------------------------------- rendering
+  function tabsHtml() {
+    return '<div class="tabs">' +
+      '<button class="tab' + (view === 'log' ? ' on' : '') + '" data-view="log">Log</button>' +
+      '<button class="tab' + (view === 'dash' ? ' on' : '') + '" data-view="dash">Dashboard</button>' +
+      '</div>';
+  }
+
+  function renderLog(keepText) {
+    var free = 0, total = 0;
+    cfg.accounts.forEach(function (a) {
+      var b = balance(a.id);
+      total += b;
+      if (!a.locked) free += b;
+    });
+    var dl = daysLeft();
+
+    var h = tabsHtml();
+    h += '<div class="top">';
+    h += '<p class="eyebrow">Left to spend \u00b7 ' + esc(label(thisMonth)) + '</p>';
+    h += '<p class="bignum' + (free < 0 ? ' over' : '') + '">' + money(free) + '</p>';
+    h += '<p class="sub"><b>' + money(free / dl) + ' a day</b> for ' + dl + ' more day' + (dl === 1 ? '' : 's') +
+         ' \u00b7 ' + money(total) + ' across all accounts</p>';
+    h += '<div class="accgrid">';
+    cfg.accounts.forEach(function (a) {
+      var b = balance(a.id);
+      h += '<div class="acccard' + (a.locked ? ' locked' : '') + '"><em>' + esc(a.name) +
+           (a.locked ? ' <span class="lockmark">locked</span>' : '') + '</em>' +
+           '<strong' + (b < 0 ? ' class="neg"' : '') + '>' + money(b) + '</strong></div>';
+    });
+    h += '</div>';
+    h += '<button class="setupbar" id="toggle">' + (showSet ? 'Hide balances & limits' : 'Enter balances & limits') + '</button>';
+    h += '</div>';
+
+    h += '<div class="sec"><div class="sechead"><h2>' + month.entries.length + ' entr' + (month.entries.length === 1 ? 'y' : 'ies') + ' this month</h2></div>';
+    if (!month.entries.length) {
+      h += '<p class="empty">Put your balances in first \u2014 the blue button above. Then log as you go.</p>';
+    } else {
+      month.entries.slice().sort(function (a, b) { return b.ts - a.ts; }).forEach(function (e) {
+        var a = accById(e.accId), b2 = accById(e.toId), c = catById(e.catId), d = new Date(e.ts);
+        var title = e.note || (e.dir === 'move' ? 'Transfer' : (e.dir === 'in' ? 'Money in' : (c ? c.name : 'Spend')));
+        var where = e.dir === 'move'
+          ? esc(a ? a.name : '?') + ' \u2192 ' + esc(b2 ? b2.name : '?')
+          : esc(a ? a.name : '?') + (e.dir === 'out' && c ? ' \u00b7 ' + esc(c.name) : '');
+        var sign = e.dir === 'in' ? '+' : (e.dir === 'move' ? '' : '\u2212');
+        h += '<div class="row"><div class="rowmain">' +
+             '<div class="rowtop">' + esc(title) + '</div>' +
+             '<div class="rowsub">' + where + ' \u00b7 ' + d.getDate() + ' ' + d.toLocaleString('en-IN', { month: 'short' }) + '</div></div>' +
+             '<div class="rowamt' + (e.dir === 'in' ? ' in' : (e.dir === 'move' ? ' move' : '')) + '">' + sign + money(e.amt) + '</div>' +
+             '<button class="del" data-del="' + e.id + '" aria-label="Delete">\u00d7</button></div>';
+      });
+    }
+    h += '</div>';
+
+    var ph = mode === 'out' ? '250 lunch gpay' : (mode === 'in' ? '25000 salary' : '4100 salary savings');
+    var btn = mode === 'out' ? 'Spend' : (mode === 'in' ? 'Add' : 'Move');
+    h += '<div class="typearea"><div class="modes">';
+    h += '<button class="mode' + (mode === 'out' ? ' on' : '') + '" data-mode="out">Out</button>';
+    h += '<button class="mode' + (mode === 'in' ? ' on' : '') + '" data-mode="in">In</button>';
+    h += '<button class="mode' + (mode === 'move' ? ' on' : '') + '" data-mode="move">Transfer</button>';
+    h += '</div>';
+    h += '<div class="typebox"><input id="line" type="text" autocomplete="off" enterkeyhint="done" placeholder="' + ph + '">';
+    h += '<button class="go' + (mode === 'in' ? ' credit' : (mode === 'move' ? ' shift' : '')) + '" id="go" disabled>' + btn + '</button></div>';
+    h += '<div class="readout" id="readout">Type an amount and a word.</div>';
+    h += '<p class="chiplabel">' + (mode === 'move' ? 'From' : 'Account') + '</p><div class="chips">';
+    cfg.accounts.forEach(function (a) { h += '<button class="chip" data-acc="' + a.id + '">' + esc(a.name) + '</button>'; });
+    h += '</div>';
+    if (mode === 'move') {
+      h += '<p class="chiplabel">To</p><div class="chips">';
+      cfg.accounts.forEach(function (a) { h += '<button class="chip" data-acc2="' + a.id + '">' + esc(a.name) + '</button>'; });
+      h += '</div>';
+    }
+    if (mode === 'out') {
+      h += '<p class="chiplabel">Category \u00b7 what is left in each</p><div class="chips">';
+      cfg.cats.forEach(function (c) {
+        var rem = c.limit > 0 ? c.limit - spentIn(month, c.id) : null;
+        h += '<button class="chip" data-cat="' + c.id + '">' + esc(c.name) +
+             (rem !== null ? ' <b class="rem' + (rem < 0 ? ' neg' : '') + '">' + money(rem) + '</b>' : '') +
+             '</button>';
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+
+    if (showSet) {
+      h += '<div class="panel"><h3>Balance in each account today</h3>';
+      cfg.accounts.forEach(function (a) {
+        h += '<div class="field"><input type="text" data-aname="' + a.id + '" value="' + esc(a.name) + '">' +
+             '<input type="tel" inputmode="numeric" data-aopen="' + a.id + '" value="' + (+((month.open || {})[a.id]) || 0) + '">' +
+             '<button class="lockbtn' + (a.locked ? ' on' : '') + '" data-alock="' + a.id + '">' + (a.locked ? '\u25CF' : '\u25CB') + '</button></div>';
+      });
+      h += '<p class="note">This is the opening figure for ' + esc(label(thisMonth)) +
+           '. A locked account is left out of &ldquo;left to spend&rdquo;.</p>';
+      h += '<div class="divider"></div><h3>Categories</h3>';
+      cfg.cats.forEach(function (c) {
+        var used = spentIn(month, c.id) > 0;
+        h += '<div class="field"><input type="text" data-cname="' + c.id + '" value="' + esc(c.name) + '">' +
+             '<input type="tel" inputmode="numeric" data-lim="' + c.id + '" value="' + (+c.limit || 0) + '">' +
+             (used
+               ? '<span class="inuse">in use</span>'
+               : '<button class="del" data-cdel="' + c.id + '" aria-label="Remove category">\u00d7</button>') +
+             '</div>';
+      });
+      h += '<button class="ghost" id="addcat">+ Add a category</button>';
+      h += '<p class="note">Rename a category and the words in its name become search words, so ' +
+           '<em>Bike service</em> will catch \u201c400 bike\u201d. A category with spending in it cannot be deleted.</p>';
+      h += '<div class="divider"></div>';
+      h += '<div class="divider"></div>';
+      h += '<button class="ghost" id="backup">Save a backup</button>';
+      h += '<button class="ghost" id="restore">Restore a backup</button>';
+      h += '<button class="ghost danger" id="wipe">Clear this month\u2019s entries</button>';
+      h += '<input type="file" id="restorefile" accept=".json,application/json" style="display:none">';
+      h += '<p class="note">A backup is one small file with every month in it. Keep it in Drive. ' +
+           'If your browser ever clears its data, restore it and nothing is lost.</p>';
+      h += '<p class="note">Next month starts on its own and carries these balances forward. Old months stay on the Dashboard.</p>';
+      h += '</div>';
+    }
+
+    h += '<p class="hint">Name the account in the line: <code>250 lunch gpay</code>, <code>1200 petrol cash</code>, ' +
+         '<code>3000 rent salary</code>. Tap a chip to correct it.</p>';
+
+    app.innerHTML = h;
+    wireCommon();
+    wireLog(keepText);
+  }
+
+  function renderDash() {
+    var rec = dashData || { open: {}, entries: [] };
+    var ents = rec.entries || [];
+    var out = 0, inn = 0;
+    ents.forEach(function (e) { if (e.dir === 'in') inn += e.amt; else if (e.dir === 'out') out += e.amt; });
+    var openTotal = 0, closeTotal = 0;
+    cfg.accounts.forEach(function (a) {
+      openTotal += (+((rec.open || {})[a.id]) || 0);
+      closeTotal += closing(rec, a.id);
+    });
+    var days = daysElapsed(dashKey);
+    var perDay = out / Math.max(1, days);
+
+    var h = tabsHtml();
+    h += '<div class="top">';
+    h += '<p class="eyebrow">Spent in ' + esc(label(dashKey)) + '</p>';
+    h += '<p class="bignum">' + money(out) + '</p>';
+    h += '<p class="sub"><b>' + money(perDay) + ' a day</b> over ' + days + ' day' + (days === 1 ? '' : 's') +
+         (dashKey === thisMonth ? ' so far' : '') + '</p>';
+    h += '</div>';
+
+    h += '<div class="sec"><div class="sechead"><h2>Month</h2></div><div class="months chips">';
+    monthList.forEach(function (k) {
+      h += '<button class="chip' + (k === dashKey ? ' on' : '') + '" data-month="' + k + '">' +
+           esc(shortLabel(k)) + ' ' + k.slice(2, 4) + '</button>';
+    });
+    h += '</div></div>';
+
+    h += '<div class="sec"><div class="sechead"><h2>The month in four numbers</h2></div><div class="stats">';
+    h += '<div class="stat"><em>Started with</em><strong>' + money(openTotal) + '</strong></div>';
+    h += '<div class="stat"><em>Money in</em><strong class="in">+' + money(inn) + '</strong></div>';
+    h += '<div class="stat"><em>Money out</em><strong class="out">\u2212' + money(out) + '</strong></div>';
+    h += '<div class="stat"><em>Ended with</em><strong>' + money(closeTotal) + '</strong></div>';
+    h += '</div></div>';
+
+    var withSpend = cfg.cats.map(function (c) {
+      return { c: c, s: spentIn(rec, c.id) };
+    }).filter(function (x) { return x.s > 0 || x.c.limit > 0; })
+      .sort(function (a, b) { return b.s - a.s; });
+
+    h += '<div class="sec"><div class="sechead"><h2>Where it went</h2></div>';
+    if (!out) {
+      h += '<p class="empty">Nothing spent in this month.</p>';
+    } else {
+      withSpend.forEach(function (x) {
+        var pctOfSpend = out ? Math.round((x.s / out) * 100) : 0;
+        var fill = x.c.limit > 0 ? Math.min(100, (x.s / x.c.limit) * 100) : pctOfSpend;
+        var bust = x.c.limit > 0 && x.s > x.c.limit;
+        h += '<div class="catblock"><div class="catline"><em style="font-style:normal">' + esc(x.c.name) +
+             (x.s ? ' <span style="color:var(--muted);font-size:11px">' + pctOfSpend + '% of spend</span>' : '') + '</em>' +
+             '<span' + (bust ? ' class="bust"' : '') + '><b>' + money(x.s) + '</b>' +
+             (x.c.limit ? ' / ' + money(x.c.limit) : '') + '</span></div>' +
+             '<div class="bar"><i class="' + (bust ? 'bust' : '') + '" style="width:' + fill.toFixed(1) + '%"></i></div></div>';
+      });
+    }
+    h += '</div>';
+
+    h += '<div class="sec"><div class="sechead"><h2>By account</h2></div>';
+    cfg.accounts.forEach(function (a) {
+      var o = +((rec.open || {})[a.id]) || 0, cl = closing(rec, a.id), diff = cl - o;
+      h += '<div class="row"><div class="rowmain"><div class="rowtop">' + esc(a.name) + '</div>' +
+           '<div class="rowsub">' + money(o) + ' \u2192 ' + money(cl) + '</div></div>' +
+           '<div class="rowamt' + (diff >= 0 ? ' in' : '') + '">' + (diff >= 0 ? '+' : '\u2212') + money(Math.abs(diff)) + '</div></div>';
+    });
+    h += '</div>';
+
+    var big = ents.filter(function (e) { return e.dir === 'out'; })
+                  .sort(function (a, b) { return b.amt - a.amt; }).slice(0, 5);
+    if (big.length) {
+      h += '<div class="sec"><div class="sechead"><h2>Biggest spends</h2></div>';
+      big.forEach(function (e) {
+        var c = catById(e.catId), d = new Date(e.ts);
+        h += '<div class="row"><div class="rowmain"><div class="rowtop">' + esc(e.note || (c ? c.name : 'Spend')) + '</div>' +
+             '<div class="rowsub">' + esc(c ? c.name : '\u2014') + ' \u00b7 ' + d.getDate() + ' ' + d.toLocaleString('en-IN', { month: 'short' }) + '</div></div>' +
+             '<div class="rowamt">' + money(e.amt) + '</div></div>';
+      });
+      h += '</div>';
+    }
+
+    app.innerHTML = h;
+    wireCommon();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-month]'), function (b) {
+      b.addEventListener('click', async function () {
+        dashKey = b.getAttribute('data-month');
+        dashData = dashKey === thisMonth ? month : (await readMonth(dashKey) || { open: {}, entries: [] });
+        render();
+      });
+    });
+  }
+
+  function render(keepText) {
+    if (view === 'dash') renderDash(); else renderLog(keepText);
+  }
+
+  function wireCommon() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-view]'), function (b) {
+      b.addEventListener('click', async function () {
+        view = b.getAttribute('data-view');
+        if (view === 'dash') {
+          await refreshMonthList();
+          if (dashKey === thisMonth) dashData = month;
+        }
+        render();
+      });
+    });
+  }
+
+  function wireLog(keepText) {
+    var line = document.getElementById('line');
+    var go = document.getElementById('go');
+    var readout = document.getElementById('readout');
+    if (keepText) line.value = keepText;
+
+    function refresh() {
+      var p = parse(line.value);
+      var accs = document.querySelectorAll('[data-acc]');
+      var cats = document.querySelectorAll('[data-cat]');
+      if (!p) {
+        readout.textContent = 'Type an amount and a word.';
+        go.disabled = true;
+        Array.prototype.forEach.call(accs, function (b) { b.classList.remove('on'); });
+        Array.prototype.forEach.call(cats, function (b) { b.classList.remove('on'); });
+        return;
+      }
+      var accId = accPick || p.accId || cfg.lastAcc;
+      var toId = mode === 'move' ? (acc2Pick || p.toId) : null;
+      var catId = mode === 'out' ? (catPick || p.catId) : null;
+      var a = accById(accId), b2 = toId ? accById(toId) : null, c = catId ? catById(catId) : null;
+      var txt = '<b>' + money(p.amt) + '</b> \u00b7 ' + (mode === 'in' ? 'into ' : 'from ') +
+                '<i>' + esc(a ? a.name : 'pick an account') + '</i>';
+      if (mode === 'move') txt += ' \u2192 <i>' + (b2 ? esc(b2.name) : 'pick where it goes') + '</i>';
+      if (mode === 'out') {
+        txt += ' \u00b7 ' + (c ? esc(c.name) : 'pick a category');
+        if (c && c.limit > 0) {
+          var after = c.limit - spentIn(month, c.id) - p.amt;
+          txt += ' \u00b7 <b' + (after < 0 ? ' style="color:var(--alert)"' : '') + '>' +
+                 money(after) + '</b> left of ' + money(c.limit) + (after < 0 ? ' \u2014 over' : '');
+        }
+      }
+      if (mode === 'move' && a && b2 && accId === toId) txt += ' \u00b7 same account';
+      readout.innerHTML = txt;
+      go.disabled = !a || (mode === 'out' && !c) || (mode === 'move' && (!b2 || accId === toId));
+      Array.prototype.forEach.call(accs, function (b) { b.classList.toggle('on', b.getAttribute('data-acc') === accId); });
+      Array.prototype.forEach.call(cats, function (b) { b.classList.toggle('on', b.getAttribute('data-cat') === catId); });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-acc2]'), function (b) {
+        b.classList.toggle('on', b.getAttribute('data-acc2') === toId);
+      });
+    }
+
+    function submit() {
+      var p = parse(line.value);
+      if (!p) return;
+      var accId = accPick || p.accId || cfg.lastAcc;
+      var toId = mode === 'move' ? (acc2Pick || p.toId) : null;
+      var catId = mode === 'out' ? (catPick || p.catId) : null;
+      if (!accId || (mode === 'out' && !catId)) return;
+      if (mode === 'move' && (!toId || toId === accId)) return;
+      month.entries.push({
+        id: 'e' + Date.now() + Math.random().toString(36).slice(2, 5),
+        dir: mode, accId: accId, toId: toId, catId: catId, amt: p.amt, note: p.note, ts: Date.now()
+      });
+      cfg.lastAcc = accId;
+      accPick = null; catPick = null; acc2Pick = null;
+      saveMonth(); saveCfg();
+      render();
+      var l = document.getElementById('line');
+      if (l) l.focus();
+    }
+
+    line.addEventListener('input', function () { accPick = null; catPick = null; acc2Pick = null; refresh(); });
+    line.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') submit(); });
+    go.addEventListener('click', submit);
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (b) {
+      b.addEventListener('click', function () { mode = b.getAttribute('data-mode'); accPick = null; catPick = null; acc2Pick = null; render(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-acc]'), function (b) {
+      b.addEventListener('click', function () { accPick = b.getAttribute('data-acc'); refresh(); line.focus(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-acc2]'), function (b) {
+      b.addEventListener('click', function () { acc2Pick = b.getAttribute('data-acc2'); refresh(); line.focus(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cat]'), function (b) {
+      b.addEventListener('click', function () { catPick = b.getAttribute('data-cat'); refresh(); line.focus(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-del');
+        month.entries = month.entries.filter(function (e) { return e.id !== id; });
+        saveMonth(); render();
+      });
+    });
+
+    document.getElementById('toggle').addEventListener('click', function () {
+      showSet = !showSet; render(line.value);
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-aname]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var a = accById(inp.getAttribute('data-aname'));
+        if (a) { a.name = inp.value.trim() || a.name; saveCfg(); render(); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-aopen]'), function (inp) {
+      inp.addEventListener('change', function () {
+        month.open = month.open || {};
+        month.open[inp.getAttribute('data-aopen')] = parseFloat(inp.value) || 0;
+        saveMonth(); render();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-alock]'), function (b) {
+      b.addEventListener('click', function () {
+        var a = accById(b.getAttribute('data-alock'));
+        if (a) { a.locked = !a.locked; saveCfg(); render(); }
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cname]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var c = catById(inp.getAttribute('data-cname'));
+        if (!c) return;
+        var name = inp.value.trim();
+        if (!name) { render(); return; }
+        c.name = name;
+        var tokens = name.toLowerCase().split(/[^a-z0-9]+/).filter(function (w) { return w.length > 2; });
+        var seen = {}, merged = [];
+        (c.words || []).concat(tokens).forEach(function (w) {
+          if (w && !seen[w]) { seen[w] = 1; merged.push(w); }
+        });
+        c.words = merged;
+        saveCfg(); render();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cdel]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-cdel');
+        if (spentIn(month, id) > 0) return;
+        cfg.cats = cfg.cats.filter(function (c) { return c.id !== id; });
+        if (catPick === id) catPick = null;
+        saveCfg(); render();
+      });
+    });
+    var addcat = document.getElementById('addcat');
+    if (addcat) addcat.addEventListener('click', function () {
+      cfg.cats.push({ id: 'c' + Date.now(), name: 'New category', limit: 0, words: [] });
+      saveCfg(); render();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-lim]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var c = catById(inp.getAttribute('data-lim'));
+        if (c) { c.limit = parseFloat(inp.value) || 0; saveCfg(); render(); }
+      });
+    });
+    var backup = document.getElementById('backup');
+    if (backup) backup.addEventListener('click', async function () {
+      await refreshMonthList();
+      var bundle = { app: 'money', version: 1, savedAt: new Date().toISOString(), cfg: cfg, months: {} };
+      for (var i = 0; i < monthList.length; i++) {
+        var rec = monthList[i] === thisMonth ? month : await readMonth(monthList[i]);
+        if (rec) bundle.months[monthList[i]] = rec;
+      }
+      var blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'money-backup-' + thisMonth + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    });
+
+    var restore = document.getElementById('restore');
+    var restorefile = document.getElementById('restorefile');
+    if (restore && restorefile) {
+      restore.addEventListener('click', function () { restorefile.click(); });
+      restorefile.addEventListener('change', function () {
+        var f = restorefile.files && restorefile.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = async function () {
+          var bundle;
+          try { bundle = JSON.parse(reader.result); } catch (e) { alert('That file could not be read.'); return; }
+          if (!bundle || !bundle.cfg || !bundle.months) { alert('That is not a Money backup file.'); return; }
+          cfg = bundle.cfg;
+          await saveCfg();
+          var keys = Object.keys(bundle.months);
+          for (var i = 0; i < keys.length; i++) {
+            await store.set(PRE + 'm:' + keys[i], JSON.stringify(bundle.months[keys[i]]));
+          }
+          month = bundle.months[thisMonth] || { open: {}, entries: [] };
+          await saveMonth();
+          await refreshMonthList();
+          dashKey = thisMonth; dashData = month;
+          showSet = false;
+          render();
+          alert('Restored ' + keys.length + ' month' + (keys.length === 1 ? '' : 's') + '.');
+        };
+        reader.readAsText(f);
+      });
+    }
+
+    var wipe = document.getElementById('wipe');
+    if (wipe) wipe.addEventListener('click', function () { month.entries = []; saveMonth(); render(); });
+
+    refresh();
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>
